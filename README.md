@@ -1,7 +1,6 @@
 # Nixie_Clock  
 
-<img src="./images/nixie clock.jpg" height="200"  />
-<img src="./images/nixie board.jpg" height="200"  />
+<img src="./images/nixie clock.jpg" height="200"  /> <img src="./images/nixie board.jpg" height="200"  />
   
 This is a personal project that I persued because of my interests in power electronics, high voltage circuits and vintge electrical components. It also was an opportunity to gain experience in PCB design.
 
