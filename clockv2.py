@@ -4,8 +4,10 @@ import time
 import utime
 
 # Constants
+# for use with Nixie clock v1.0.1
 T_ZERO = time.time()
 DUTY = 0.7
+SECOND_DUTY = 0.5
 
 # LED setup
 led = Pin(25, Pin.OUT)
@@ -134,7 +136,10 @@ def main():
     second_offset = 0
     a = 60 * 60 * hour_offset + 60 * minute_offset
     s = 0
-    second = Pin(16, Pin.OUT)
+    second_pwm = PWM(Pin(16, Pin.OUT))
+    second_pwm.freq(60)
+    second_pwm.duty_u16(0)
+    
     min0 = Number(0, 1, 2, 3)
     min1 = Number(4, 5, 6, 7)
     hr0 = Number(8, 9, 10, 11)
@@ -157,12 +162,12 @@ def main():
         t_sec = math.floor(time.time() - T_ZERO + hour_offset * 60 * 60 + minute_offset * 60)
         if s == s_prev:
             pass
-        a += 1
         if s:
             led.high()
+            second_pwm.duty_u16(int(65025 * (SECOND_DUTY )))
         else:
             led.low()
-            second.value(0)
+            second_pwm.duty_u16(0)
         if digit_test:
             clockObj.digittest(t_sec)
             continue

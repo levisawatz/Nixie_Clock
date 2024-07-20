@@ -76,7 +76,7 @@ class ClockFace():
                     
 
 def main():
-    digit_test=0
+    digit_test=1
 
     ##set time
     hour_offset  =11
