@@ -5,9 +5,13 @@ import utime
 
 # Constants
 # for use with Nixie clock v1.0.1
-T_ZERO = time.time()
 DUTY = 0.7
-SECOND_DUTY = 0.5
+# SECOND_DUTY = 0.5
+
+loop_frequency = 600
+loop_time_us = int(1_000_000 / loop_frequency)  # Loop time in seconds
+
+# Convert loop time to microseconds
 
 # LED setup
 led = Pin(25, Pin.OUT)
@@ -103,9 +107,9 @@ class ClockFace:
                 return
         else:
             self.rollticker = 0
-        print(h, m, t_sec % 60)
         if t_sec == self.current_time:
             return
+        print(h, m, t_sec % 60)
         self.current_time = t_sec
         self.min0.set_val(m % 10)
         self.min1.set_val(m // 10)
@@ -128,17 +132,34 @@ class ClockFace:
                 self.hr0.set_val(self.rollticker % 10)
                 self.hr1.set_val(self.rollticker % 10)
                 self.rollticker += 1
+def manage_buttons(hourButton, minButton, t_sec):
+    timeadjust = -hourButton.manage(t_sec)
+    timeadjust -= minButton.manage(t_sec)
 
+    if timeadjust != 0: #reset seconds to 0 if time is adjusted
+        timeadjust += t_sec % 60
+    return timeadjust
+def manual_pwm(pin, counter, on, off):
+    if counter<off:
+        pin.value(0)
+    elif counter <on+off:
+        pin.value(1)
+    else:
+        pin.value(0)
+        return 0
+    return counter
+    
+
+
+    
 def main():
     digit_test = 0
     hour_offset = 10
     minute_offset = 59
-    second_offset = 0
-    a = 60 * 60 * hour_offset + 60 * minute_offset
     s = 0
-    second_pwm = PWM(Pin(16, Pin.OUT))
-    second_pwm.freq(60)
-    second_pwm.duty_u16(0)
+    second_pin = Pin(16, Pin.OUT)
+    second_pin.value(0)
+    loop_counter =0
     
     min0 = Number(0, 1, 2, 3)
     min1 = Number(4, 5, 6, 7)
@@ -150,29 +171,38 @@ def main():
     T_ZERO = time.time()
     print("t_zero", T_ZERO)
     
+    t_sec = math.floor(time.time() - T_ZERO + hour_offset * 60 * 60 + minute_offset * 60)
     while True:
+        loop_start_time = utime.ticks_us()  # Get start time in microseconds
+        loop_counter+=1
+
+        time_adjust = manage_buttons(hourButton, minButton, t_sec)
+        T_ZERO+= time_adjust
         t_sec = math.floor(time.time() - T_ZERO + hour_offset * 60 * 60 + minute_offset * 60)
-        s_prev = s
         s = int(t_sec % 2)
-        timeadjust = hourButton.manage(t_sec)
-        timeadjust += minButton.manage(t_sec)
-        T_ZERO -= timeadjust
-        if timeadjust != 0:
-            T_ZERO += t_sec % 60
-        t_sec = math.floor(time.time() - T_ZERO + hour_offset * 60 * 60 + minute_offset * 60)
-        if s == s_prev:
-            pass
+
         if s:
-            led.high()
-            second_pwm.duty_u16(int(65025 * (SECOND_DUTY )))
+            ##led.high()
+            loop_counter = manual_pwm(second_pin, loop_counter, on=1 ,off = 9)
         else:
-            led.low()
-            second_pwm.duty_u16(0)
+            ##led.low()
+            second_pin.low()
         if digit_test:
             clockObj.digittest(t_sec)
             continue
         clockObj.update(t_sec)
-        time.sleep(0.01)
+
+
+    # Calculate remaining time to sleep
+        elapsed_time = utime.ticks_diff(utime.ticks_us(), loop_start_time)
+        sleep_time = loop_time_us - elapsed_time
+        if sleep_time > 0:
+            utime.sleep_us(sleep_time)
+        else:
+            print(f"loop time is: {elapsed_time/1_000} ms")
+            print(f"loop frequency is: {1_000_000/(elapsed_time)} Hz")
+
+
 
 if __name__ == "__main__":
     main()
